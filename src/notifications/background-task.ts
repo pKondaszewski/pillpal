@@ -38,8 +38,8 @@ if (isSupported && !TaskManager.isTaskDefined(BACKGROUND_RESPONSE_TASK)) {
 async function handleResponse(response: NotificationResponse): Promise<void> {
   if (AppState.currentState === 'active') return;
 
-  const doseId = response.notification.request.content.data?.doseId;
-  if (typeof doseId !== 'string') return;
+  const doseId = doseIdOf(response);
+  if (!doseId) return;
 
   const { actionIdentifier } = response;
   try {
@@ -50,5 +50,20 @@ async function handleResponse(response: NotificationResponse): Promise<void> {
     }
   } catch (err) {
     log.error(`Background ${actionIdentifier} failed for dose ${doseId}`, err);
+  }
+}
+
+function doseIdOf(response: NotificationResponse): string | undefined {
+  const { dataString } = response.notification.request.content as {
+    dataString?: string;
+  };
+  if (!dataString) return undefined;
+
+  try {
+    const { doseId } = JSON.parse(dataString);
+    return typeof doseId === 'string' ? doseId : undefined;
+  } catch (err) {
+    log.warn('Failed to parse notification dataString', err);
+    return undefined;
   }
 }
